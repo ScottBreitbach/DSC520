@@ -1,0 +1,76 @@
+---
+title: "7.1 Assignment"
+author: "Scott Breitbach"
+date: "7/13/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/micha/OneDrive/Documents/GitHub/DSC520/")
+library(foreign)
+```
+
+## Assignment 7.1: Fit a Logistic Regression Model to the Thoracic Surgery Binary Dataset
+
+```{r read file, echo = TRUE}
+surgery_df <- read.arff("completed/Week7/ThoraricSurgery.arff")
+```
+
+```{r rename cols, echo = TRUE}
+names(surgery_df) <- c("Diagnosis", "FVC", "Vol_Exhaled", "Perform_Zb", "Pain_B4_Srg", "Haem_B4_Srg", "Dysp_B4_Srg", "Cough_B4_Srg", "Weak_B4_Srg", "Tumor_Size", "Diabetes", "Heart_Atk", "Pr_Art_Dis", "Smoking", "Asthma", "Age", "Died_1Yr")
+```
+
+```{r set baseln, echo = TRUE}
+surgery_df$Pain_B4_Srg <- relevel(surgery_df$Pain_B4_Srg, "F")
+surgery_df$Haem_B4_Srg <- relevel(surgery_df$Haem_B4_Srg, "F")
+surgery_df$Dysp_B4_Srg <- relevel(surgery_df$Dysp_B4_Srg, "F")
+surgery_df$Cough_B4_Srg <- relevel(surgery_df$Cough_B4_Srg, "F")
+surgery_df$Weak_B4_Srg <- relevel(surgery_df$Weak_B4_Srg, "F")
+surgery_df$Diabetes <- relevel(surgery_df$Diabetes, "F")
+surgery_df$Heart_Atk <- relevel(surgery_df$Heart_Atk, "F")
+surgery_df$Pr_Art_Dis <- relevel(surgery_df$Pr_Art_Dis, "F")
+surgery_df$Smoking <- relevel(surgery_df$Smoking, "F")
+surgery_df$Asthma <- relevel(surgery_df$Asthma, "F")
+surgery_df$Died_1Yr <- relevel(surgery_df$Died_1Yr, "F")
+```
+
+### a. Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+
+```{r model, echo = TRUE}
+survival_glm <- glm(Died_1Yr ~ Diagnosis + FVC + Vol_Exhaled + Perform_Zb + Pain_B4_Srg + Haem_B4_Srg + Dysp_B4_Srg + Cough_B4_Srg + Weak_B4_Srg + Tumor_Size + Diabetes + Heart_Atk + Pr_Art_Dis + Smoking + Asthma + Age, data = surgery_df, family = binomial())
+summary(survival_glm)
+```
+
+### b. According to the summary, which variables had the greatest effect on the survival rate?
+
+Both Dyspnoea before surgery and a tumor size score of OC14 (the largest size in this study) were the highest predictors of death, with z-values of 2.81 and 2.71, respectively. Both were significant with p values < 0.01. 
+
+The next best predictors of death were whether the individual was a smoker and whether they had diabetes, with z-values of 2.17 and 2.09 (both at significance < 0.05). 
+
+If we want to look strictly at variables associated with surviving, then "Volume that has been exhaled at the end of the first second of forced expiration" had the greatest negative correlation with the death outcome at a z-value of -1.70 (significance of 0.1)
+
+```{r diagnostics, echo = TRUE, message = FALSE, warning = FALSE}
+# Odds Ratio
+exp(survival_glm$coefficients)
+# Confidence Interval
+exp(confint(survival_glm))
+```
+
+Dsyp_B4_Srg has an odds ratio of 3.928 indicating that an individual with Dyspnoea has 3.9 times greater risk of dying within the year than someone without. Additionally the odds ratios for Tumor_SizeOC14, Diabetes, and Smoking were 5.22, 2.53, and 2.95 respectively. On the flip side, Vol_Exhaled had an odds ratio of only 0.097. None of their confidence intervals cross zero.
+
+### c. To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+
+```{r accuracy, echo = TRUE}
+# "Run the data through the model"
+res <- predict(survival_glm, surgery_df, type = "response")
+# "Validate the model - confusion matrix"
+confmatrix <- table(Actual_Value=surgery_df$Died_1Yr, Predicted_Value = res > 0.5)
+confmatrix
+"Accuracy"
+(confmatrix[[1,1]] + confmatrix[[2,2]]) / sum(confmatrix)
+```
+
+The model appears to be 83.6% accurate.

@@ -1,0 +1,75 @@
+---
+title: "Assignment 4"
+author: "Laura Hoffmann"
+date: "6/20/2020"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+bibliography: bibliography.bib
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/micha/OneDrive/Documents/GitHub/DSC520/")
+```
+
+
+# Markdown Basics
+
+## Favorite Foods
+1. Sushi
+2. Tacos
+3. Snow Crab
+
+## Images
+![All Cases (Log Plot)](plots/10-all-cases-log.png)
+
+
+## Add a Quote
+> "The noblest art is that of making others happy" -P.T. Barnum
+
+## Add an Equation
+$$
+    {\hat{\beta}} = (X^TX)^{-1}X^TY
+$$
+## Add a Footnote
+
+^[This is a footnote]
+
+## Add Citations
+
+* R for Everyone
+* Discovering Statistics Using R
+
+# Inline Code
+```{r}
+library(readr)
+library(ggplot2)
+heights_df <- read.csv("data/r4ds/heights.csv")
+covid_df <- read.csv("data/nytimes/covid-19-data/us-states.csv")
+california_df <- covid_df[ which( covid_df$state == "California"), ]
+ny_df <- covid_df[ which( covid_df$state == "New York"), ]
+florida_df <- covid_df[ which( covid_df$state == "Florida"), ]
+```
+
+## NY Times COVID-19 Data
+```{r}
+ggplot(data=florida_df, aes(x=date, group=1)) +
+  geom_line(aes(y = cases, colour = "Florida")) +
+  geom_line(data=ny_df, aes(y = cases,colour="New York")) +
+  geom_line(data=california_df, aes(y = cases, colour="California")) +
+  scale_colour_manual("",
+                      breaks = c("Florida", "New York", "California"),
+                      values = c("darkred", "darkgreen", "steelblue")) +
+  xlab(" ") + ylab("Cases") + scale_y_log10()
+```
+
+## R4DS Height vs Earnings
+
+# Tables
+
+## Knitr Table with Kable
+
+## Pandoc Table
+
+# References

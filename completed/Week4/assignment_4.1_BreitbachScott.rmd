@@ -1,0 +1,142 @@
+---
+title: '4.1 Assignment: Student Survey'
+author: "Scott Breitbach"
+date: "June 22nd 2020"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+bibliography: bibliography.bib
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/micha/OneDrive/Documents/GitHub/DSC520/")
+library(ggm)
+```
+
+## Covariance
+
+### a. Use R to calculate the covariance of the Survey variables and provide an explanation of why you would use this calculation and what the results indicate.
+
+```{r covariance, echo = TRUE}
+studentSurvey_df <- read.csv("completed/Week4/student-survey.csv")
+cov(studentSurvey_df)
+```
+
+Covariance gives us a measure of relatedness of the variables to each other. In
+this table, where one variable is compared to itself we are given the variance,
+which is a measure of the average error between the model (or mean) and the 
+actual observations. In the case of variance, the closer to zero, the less
+overall error meaning the values overall hung out relatively close to the mean.
+When calculating the covariance between two different variables, you are more or
+less determining if they are positively or negatively correlated, or if one 
+increases, the other will either increase with it or decrease proportionally.
+Unless you are using the same units, it can be difficult to compare magnitude
+of the relatedness.
+
+## Survey Data Variables
+
+### b. Examine the Survey data variables. What measurement is being used for the variables? Explain what effect changing the measurement being used for the variables would have on the covariance calculation. Would this be a problem? Explain and provide a better alternative if needed.
+
+Given that units aren't provided in the data set and that the survey participants are students, I'm going with the following assumptions: The TimeReading units are in hours and the TimeTV units are in minutes. I went back and forth on the period and ultimately decided these units were probably per day. The Happiness variable is possibly a rating out of 100 and Gender is male or female but it's not defined which is which. 
+
+For the Time units, converting between minutes and hours will 
+have an effect on covariance in that minutes will produce higher numbers than
+hours. For an easier comparison it would be preferred to have them in the same
+units. If we knew which gender was which, we could swap the coding and we'd get
+the negative of the original result. This may provide some information on the 
+magnitude of the covariance, but not the direction.
+
+## Correlation Test
+
+### c. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yields a positive or negative correlation?
+
+I have chosen to compare TimeReading with TimeTV using Pearson's correlation
+coefficient because both variables consist of interval data. I believe these will have a negative correlation because the students have a limited supply of time available to be allotted to various tasks. 
+
+```{r cor test, echo = TRUE}
+cor(studentSurvey_df$TimeReading, studentSurvey_df$TimeTV, method = "pearson")
+```
+
+## Correlation Analysis
+
+### d. Perform a correlation analysis of:
+#### d.1. All variables
+```{r all var, echo = TRUE}
+cor(studentSurvey_df)
+```
+#### d.2. A single correlation between a pair of the variables
+```{r single cor, echo = TRUE}
+cor.test(studentSurvey_df$TimeTV, studentSurvey_df$Happiness)
+```
+#### d.3. Repeat your correlation test in step 2 but set the confidence interval at 99%
+```{r single cor 99, echo = TRUE}
+cor.test(studentSurvey_df$TimeTV, studentSurvey_df$Happiness, conf.level = 0.99)
+```
+#### d.4. Describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+
+Using the correlation values generated in question d.1., I can say that time 
+spent reading and time spent watching TV are pretty strongly negatively
+correlated. This makes sense because they both require the use of time, of which
+there is a limited supply. Time spent reading and happiness are also negatively
+correlated to a reasonably strong degree. On the flip side, time spent watching
+TV and happiness have a fairly strong positive correlation, indicating that 
+people who watch more TV are generally happier and people who spend more time
+reading are generally less happy. The remaining variable, Gender, isn't really
+very strongly correlated with any of the variables. The strongest correlation is
+with Happiness, but even that is relatively small. The correlations between
+Gender and either time spent reading or time watching TV are both near zero,
+indicating that there is very little difference between men and women and these
+other variables.
+
+## Coefficient of Determination
+
+### e. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+```{r cor coef det, echo = TRUE}
+# Correlation Coefficient
+cor(studentSurvey_df)
+
+# Coefficient of Determination
+cor(studentSurvey_df)^2 * 100  
+```
+
+As discussed in question d.4., the correlation coefficient tells you on a scale
+of -1 to 1 how correlated two variables are to each other, with zero being no
+correlation and +/- 1 being fully correlated, either positively (as one increases the other increases) or negatively (as one increases, the other decreases). 
+The coefficient of determination is the same values squared, then multiplied by
+100 to give the percent of variability that the two variables share with each
+other. The numbers are different, but the results are largely the same in that
+Gender doesn't share much variability with any of the other variables. Meanwhile, time watching TV shares 78.0% of its variability with time reading and 40.5% with happiness, leaving 22.0% and 59.5% respectively to be accounted for by other factors. Additionally, happiness shares 18.9% of it's variability with time spent reading.
+
+## Causation
+
+### f. Based on your analysis can you say that watching more TV caused students to read less? Explain.
+
+While there is a large (negative) correlation between time spent watching TV and
+time spent reading, you cannot conclude that one causes the other in either
+direction, only that if there is an increase in one will likely correspond with a decrease in the other. In this case it is more likely that a third factor, the
+limited amount of total available time (such as hours in a day) is a contributing factor to the negative correlation between the two variables.
+
+## Partial Correlation
+
+### g. Pick three variables and perform a partial correlation, documenting which variable you are “controlling”. Explain how this changes your interpretation and explanation of the results.
+
+```{r part cor, echo = TRUE}
+studentSurvey2_df <- studentSurvey_df[, c("TimeReading", "TimeTV", "Happiness")]
+pc <- pcor(c("TimeReading", "Happiness", "TimeTV"), var(studentSurvey2_df))
+pc
+pc^2
+pcor.test(pc, 1, 11)
+```
+
+I was curious about the relationship between time spent reading and happiness
+when controlling for time spent watching TV, which seemed to have a relatively
+large correlation with both. When not controlling for time spent watching TV, the correlation between time spent reading and happiness was -0.43, or 18.9% of their variation is shared. When controlling for time spent watching TV, the correlation between the two variables changes from a -0.43 to a +0.35, meaning when we control for the effect of TV watching, the correlation actually changes from a negative to a positive, which makes some sense because there was a very strong negative correlation between tv watching and reading. This leaves 12.4% of shared variance between reading and happiness, the significance of which is shown by the p-value of 0.32, which is not very statistically significant.
+While time spent watching TV accounts for a large part of the variability in
+time spent reading and the majority of the variability in happiness, there is
+still some positive effect between reading and happiness.
+
+## References
+
+* Discovering Statistics Using R [@field2012discovering]

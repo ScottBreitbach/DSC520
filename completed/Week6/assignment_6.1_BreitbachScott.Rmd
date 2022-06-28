@@ -1,0 +1,257 @@
+---
+title: '6.1 Assignment: Housing Data'
+author: "Scott Breitbach"
+date: "7/8/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/micha/OneDrive/Documents/GitHub/DSC520/")
+library(readxl)
+library(ggplot2)
+library(QuantPsyc)
+library(car)
+```
+
+## Multiple Regression
+
+### Data for this assignment is focused on real estate transactions recorded from 1964 to 2016.
+### You are interested in the following variables: Sale Price and several other possible predictors.
+
+```{r read file, echo = TRUE}
+week_6_housing <- read_excel("completed/Week6/week-6-housing.xlsx")
+# head(week_6_housing)
+```
+
+```{r plots, echo = FALSE}
+ggplot(week_6_housing, aes(x = bath_full_count, y = `Sale Price`)) + geom_point()
+ggplot(week_6_housing, aes(x = lat, y = `Sale Price`)) + geom_point()
+```
+
+```{r clean, echo = TRUE}
+week_6_housing$bath_full_count[week_6_housing$bath_full_count==23] <- 4
+week_6_housing <- week_6_housing[!week_6_housing$lat < 47.5, ]
+```
+
+```{r cln plts, echo = FALSE}
+ggplot(week_6_housing, aes(x = bath_full_count, y = `Sale Price`)) + geom_point()
+ggplot(week_6_housing, aes(x = lat, y = `Sale Price`)) + geom_point()
+```
+
+### a. Explain why you chose to remove data points from your ‘clean’ dataset.
+
+Having created histograms, boxplots, and scatterplots of each variable against Sale Price, I noticed a couple of points that seemed way outside of the rest. 
+
+One of the properties in the data set was recorded as having 23 full bathrooms. This seemed unusual even for a mansion and I figured it was probably a typo, so I looked up the address on Zillow.com and found that the house is listed as having 4 bathrooms. As a result, I changed the value from 23 to 4.
+
+The other value I removed because the latitude was significantly outside of the others. With a quick search on Google Maps I found that the address matched the lat/lon correctly, but home was in Renton instead of Redmond and was therefore probably a typo. I removed this home from the data set.
+
+### b. Create two variables; one that will contain the variables Sale Price and Square Foot of Lot (same variables used from previous assignment on simple regression) and one that will contain Sale Price and several additional predictors of your choice. Explain the basis for your additional predictor selections.
+
+```{r mult reg, echo = TRUE}
+priceSqFt <- lm(`Sale Price` ~ sq_ft_lot, data = week_6_housing)
+housing_lm <- lm(`Sale Price` ~ sq_ft_lot + square_feet_total_living + building_grade + year_built, data = week_6_housing)
+```
+
+I created scatter plots of each variable with a linear model line added and visually observed the slope of each. I also performed simple regressions on each variable against the Sale Price and looked at the R squared values. Several of the variables (square feet of living space, bedrooms, and bathrooms) seemed like they would largely explain the same variance (because a larger house will tend to have more bedrooms, etc) so I chose square_feet_total_living because it had the largest R2 (of those variables and largest overall at 0.2).
+
+Additionally, I chose building_grade, which had the second largest R2 value (0.15) and year_built, which had an R2 of 0.06, but seemed like it would be unrelated to the other variables.
+
+### c. Execute a summary() function on two variables defined in the previous step to compare the model results. What are the R2 and Adjusted R2 statistics? Explain what these results tell you about the overall model. Did the inclusion of the additional predictors help explain any large variations found in Sale Price?
+
+```{r lm summary, echo = TRUE}
+summary(priceSqFt)
+summary(housing_lm)
+```
+
+R2 and adjusted R2 are 0.01436 and 0.01428 respectively for the simple regression and 0.2233 and 0.2231 respectively for the multiple regression. The R2 of 0.01436 for sq_ft_lot tells us that this variable accounts for 1.4% of the variation in Sale Price. When including the other three predictors (square_feet_total_living, building_grade, and year_built), the R2 increases to 0.2233, explaining 22.3% of the variation in Sale Price, which means that the three added predictors account for an additional 20.9% of the variance.
+
+The adjusted R2 roughly how well our model generalizes. If the difference between the adjusted R2 value and the R2 value is small, it means the model generalizes well. In the instance of our multiple regression model, the difference (0.2233 - 0.2231) is 0.0002, indicating if the model were derived from the general population instead of the sample, that it would account for about 0.02% less variance.
+
+### d. Considering the parameters of the multiple regression model you have created. What are the standardized betas for each parameter and what do the values indicate?
+
+```{r std beta, echo = TRUE}
+lm.beta(housing_lm)
+sd(week_6_housing$`Sale Price`)
+sd(week_6_housing$sq_ft_lot)
+sd(week_6_housing$square_feet_total_living)
+sd(week_6_housing$building_grade)
+sd(week_6_housing$year_built)
+```
+
+The standardized betas tell us that for each unit change in the standard deviation of the predictor variable, the outcome will change by the number of standard deviations reported. Larger values, like for square_feet_total_living (0.35) and year_built (0.11) indicate more importance in the model than building_grade (0.09) and sq_ft_lot (0.04).
+
+This tells us, for example, that for every standard deviation unit increase in living space, ~990 sqft, you could expect a 0.345 standard deviation unit increase in Sale Price (0.345 * \$404,396 = \$139,517). So for each additional 990 square feet you could expect another \$139,517 increase to the Sale Price. Similarly, for each 56,935 sqft of lot space (or ~1 American football field), you could expect an extra (0.0417 * \$139,517) \$5,818 on the Sale Price.
+
+### e. Calculate the confidence intervals for the parameters in your model and explain what the results indicate.
+
+```{r confint, echo = TRUE}
+format(round(confint(housing_lm), digits = 4), scientific = FALSE)
+```
+
+Understanding that a smaller confidence interval means that the value of b in the sample is representative of the population, indicating a better model. Given that, square_feet_total_living and year_built seem to be relatively good predictors, while the confidence intervals for sq_ft_lot and building grade are about double from the 2.5% interval to the 97.5% interval and might not be as good of predictors.
+
+That said, none of the confidence intervals for any of the predictors cross zero, so that is good news for the model. Crossing zero would tell us that for that predictor part of the model has a negative correlation and part positive.
+
+### f. Assess the improvement of the new model compared to your original model (simple regression model) by testing whether this change is significant by performing an analysis of variance.
+
+```{r model comp, echo = TRUE}
+anova(priceSqFt, housing_lm)
+```
+
+The anova() function lets us compare the two models and gives us the Pr(>F) value, which tells us the significance in the change in R2 value from the old model to the new model. In this instance the Pr(>F) of < 2.2e-16 indicates that the change in R2 from the first model (.014) to the second model (0.223) is very significant.
+
+### g. Perform casewise diagnostics to identify outliers and/or influential cases, storing each function's output in a dataframe assigned to a unique variable name.
+
+```{r diagnostics, echo = TRUE}
+diagnostics_df <- week_6_housing[, c('Sale Date', 'Sale Price', "addr_full", 
+                                       "building_grade", "square_feet_total_living", 
+                                       "year_built", "sq_ft_lot")]
+diagnostics_df$residuals<-resid(housing_lm)
+diagnostics_df$standardized.residuals<-rstandard(housing_lm)
+diagnostics_df$studentized.residuals<-rstudent(housing_lm)
+diagnostics_df$cooks.distance<-cooks.distance(housing_lm)
+diagnostics_df$dfbeta<-dfbeta(housing_lm)
+diagnostics_df$dffit<-dffits(housing_lm)
+diagnostics_df$leverage<-hatvalues(housing_lm)
+diagnostics_df$covariance.ratios<-covratio(housing_lm)
+```
+
+### h. Calculate the standardized residuals using the appropriate command, specifying those that are +-2, storing the results of large residuals in a variable you create.
+
+```{r std residuals, echo = TRUE}
+diagnostics_df$large.residual<-diagnostics_df$standardized.residuals > 2 | 
+  diagnostics_df$standardized.residuals < -2
+```
+
+### i. Use the appropriate function to show the sum of large residuals.
+
+```{r lrg residuals, echo = TRUE}
+"Sum of large residuals"
+sum(diagnostics_df$large.residual)
+"Percent of data set with large residuals"
+sum(diagnostics_df$large.residual)/nrow(diagnostics_df)*100
+```
+
+### j. Which specific variables have large residuals (only cases that evaluate as TRUE)?
+
+```{r lrg resid true, echo = TRUE}
+std_resid_sort <- diagnostics_df[order(-diagnostics_df$standardized.residuals),]
+std_resid_sort[std_resid_sort$large.residual, 
+               c("sq_ft_lot", "square_feet_total_living", "building_grade", 
+                 "year_built", "standardized.residuals")]
+
+std_resid_sort_rev <- diagnostics_df[order(diagnostics_df$standardized.residuals),]
+head(std_resid_sort_rev[std_resid_sort_rev$large.residual, 
+               c("sq_ft_lot", "square_feet_total_living", "building_grade", 
+                 "year_built", "standardized.residuals")])
+```
+
+334 cases (2.6% of the data set) has large standardized residuals (>|2|). We would expect around 5% of the data set to have residuals over 2. I would say that this isn't necessarily cause for concern, however some of the values are quite large, as high as 10.5.
+
+### k. Investigate further by calculating the leverage, cooks distance, and covariance ratios. Comment on all cases that are problematics.
+
+#### Leverage:
+
+```{r leverage, echo = TRUE}
+leverage_df <- diagnostics_df
+avgLeverage <- mean(leverage_df$leverage)
+avgLeverage
+
+avgLeverage * 2
+leverage_df$leverageX2<-leverage_df$leverage > (avgLeverage * 2)
+sum(leverage_df$leverageX2)
+sum(leverage_df$large.residual & leverage_df$leverageX2)
+
+avgLeverage * 3
+leverage_df$leverageX3<-leverage_df$leverage > (avgLeverage * 3)
+sum(leverage_df$leverageX3)
+sum(leverage_df$large.residual & leverage_df$leverageX3)
+
+leverageSort <- leverage_df[order(-leverage_df$leverage),]
+leverageSort[leverageSort$large.residual, 
+             c("sq_ft_lot", "square_feet_total_living", "building_grade", 
+               "year_built", "leverage", "standardized.residuals")]
+```
+
+Of the 334 cases with large residuals, 110 have leverage values over 2X the average and 83 with over 3X the average. These cases with high hat values have significantly more weight in influencing the outcome variables over the predicted values from the model than the majority of the cases and should probably be reviewed more closely.
+
+If we wanted to see how much influence each of these cases was having on the parameters of the model, we could rerun the analysis with each case excluded and look at the change in the b coefficients.
+
+#### Cook's Distance:
+
+```{r cooks, echo = TRUE}
+cooksSort <- diagnostics_df[order(-diagnostics_df$cooks.distance),]
+cooksSort[cooksSort$large.residual,
+          c("sq_ft_lot", "square_feet_total_living", "building_grade", 
+               "year_built", "cooks.distance", "standardized.residuals")]
+```
+
+Cook's distance will give us information as to h
+ow much influence a case has on the entire model and all the cases that the model predicts. The text suggests that values over 1 may be cause for concern and, while there is a 0.52 value in there the only value that comes close to 1 is 0.98. This isn't over 1, but it's close enough that it should probably be investigated, and perhaps also the 0.52 value because their standardized residuals are quite large as well at 10.3 and -6.2 respectively.
+
+#### Covariance Ratios:
+
+```{r cov ratio, echo = TRUE}
+cvrHi <- 1 + (3 * (4 + 1) / nrow(diagnostics_df))
+cvrHi
+cvrLo <- 1 - (3 * (4 + 1) / nrow(diagnostics_df))
+cvrLo
+
+covrSort <- diagnostics_df[order(-diagnostics_df$covariance.ratios),]
+
+covrSort$covariance.boundaries<-covrSort$covariance.ratios > cvrHi | 
+  covrSort$covariance.ratios < cvrLo
+
+sum(covrSort$large.residual & covrSort$covariance.boundaries)
+
+covrSort[covrSort$large.residual & covrSort$covariance.boundaries,
+          c("sq_ft_lot", "year_built", "covariance.ratios", "standardized.residuals", 
+            "leverage", "cooks.distance")]
+```
+
+Looking at the upper (1.001166) and lower (0.998834) covariance ratio boundaries, it looks like of our 334 cases with large residuals, 264 have values above or below those limits. The case with the highest covariance ratio also has the second-highest Cook's distance, so it may be something to look at, but overall the other Cook's distances (apart from the 0.98) are fairly low and probably not much cause for concern since they're not having much influence on the model.
+
+### l. Perform the necessary calculations to assess the assumption of independence and state if the condition is met or not.
+
+```{r dwt, echo = TRUE}
+durbinWatsonTest(housing_lm)
+```
+
+The Durbin-Watson test tells us whether the residuals between adjacent residuals are correlated, either positively or negatively. A value of 2 indicates no correlation, which is good, and values above 3 (with a negative autocorrelation) or below 1 (positive autocorrelation) are concerning. So, this value of 0.54 raises some alarms, especially since the p-value is significant at 0.
+
+### m. Perform the necessary calculations to assess the assumption of no multicollinearity and state if the condition is met or not.
+
+```{r vif, echo = TRUE}
+vif(housing_lm)
+mean(vif(housing_lm))
+1/vif(housing_lm)
+```
+
+The largest Variance inflation factor (VIF) in my model is square_feet_total_living at 2.37 (with building_grade coming in at a close second with 2.35). Since these values are all well below 10, there is little cause for concern. 
+
+The average VIF for my model comes out to 1.76. While this values is above 1, I don't know that it would be considered significantly above 1 so it is probably okay.
+
+Finally for tolerance, values below 0.2 start to raise flags and less than 0.1 is problematic. Fortunately, the lowest value in my model is 0.42.
+
+### n. Visually check the assumptions related to the residuals using the plot() and hist() functions. Summarize what each graph is informing you of and if any anomalies are present.
+
+```{r plots hist, echo = TRUE}
+plot(housing_lm)
+hist(rstudent(housing_lm))
+```
+
+Looking at the Residuals vs Fitted values plot, the data appears pretty normal/linear overall, although there are a few clusters of dots with relatively high residuals, leading to perhaps some heteroscedasticity in the data indicating variance across the residuals. The Scale-Location plot shows largely the same information except the Fitted values are plotted against standardized residuals, which also makes all the values positive.
+
+The second plot, Normal Q-Q, helps us to visualize the deviations from normality. We can see that the majority of the points around the middle fit the line fairly well, but that they deviate at the negative end and deviate sharply at the positive end indicating that the data set is not entirely normally distributed. The histogram confirms this, showing a distribution with positive kurtosis and long tails.
+
+The final plot, Residuals vs Leverage shows that the vast majority of cases cluster toward zero leverage, which is good, though there are a handful which are quite high. In addition, most of them fall within a reasonable Cook's distance with only a couple of exceptions.
+
+### o. Overall, is this regression model unbiased? If an unbiased regression model, what does this tell us about the sample vs. the entire population model?
+
+Of the predictive variables I chose to add to my model, the square feet of living space seemed like the best predictor. Year built and building grade also seemed to be somewhat important, though less so. The square feet of the lot was the worst predictor and I would probably remove it from my model. 
+
+After removing a couple of outliers, the data set was still quite large, at 12864 cases. With such a large sample size, the model is going to generalize better with the overall population. Given the large data set, even with 334 cases that have high standardized residuals the overall percentage of problematic data points was relatively quite small. That said, there were a handful of data points that did not fit well in the model, though for the most part they held little influence on the model. It would be good, however, to look at the worst offenders more closely to see if there might be a justifiable reason to exclude them from the data set / model.

@@ -1,0 +1,73 @@
+---
+title: "Assignment 7.2"
+author: "Scott Breitbach"
+date: "7/14/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/micha/OneDrive/Documents/GitHub/DSC520/")
+library(readr)
+library(ggplot2)
+library(class)
+library(gmodels)
+```
+
+## Assignment 7.2: Fit a Logistic Regression Model to Previous Dataset
+
+```{r read file, echo = TRUE}
+bc_df <- read_csv("completed/Week7/binary-classifier-data.csv")
+bc_df$label <- factor(bc_df$label)
+```
+
+```{r check data, echo = TRUE}
+head(bc_df)
+summary(bc_df)
+str(bc_df)
+ggplot(data = bc_df, mapping = aes(x, y, color = label)) + geom_point()
+```
+
+### a. What is the accuracy of the logistic regression classifier?
+
+```{r log accuracy, echo = TRUE}
+classifier_glm <- glm(label ~ x + y, data = bc_df, family = "binomial")
+
+res <- predict(classifier_glm, bc_df, type = "response")
+confmatrix <- table(Actual_Value=bc_df$label, Predicted_Value = res > 0.5)
+confmatrix
+(confmatrix[[1,1]] + confmatrix[[2,2]]) / sum(confmatrix)
+```
+
+Applying a logistic regression to this data set yielded an accuracy of 58.3%. Looking at a plot of the data set, it would not appear that this would be the best tool for prediction.
+
+### b. How does the accuracy of the logistic regression classifier compare to the nearest neighbors algorithm?
+
+```{r setup test train, echo = TRUE}
+bc_df.2 <- bc_df
+set.seed(42)
+ind <- sample(2, nrow(bc_df.2), replace=TRUE, prob=c(0.67, 0.33))
+bc2.train <- bc_df.2[ind==1, 2:3]
+bc2.test <- bc_df.2[ind==2, 2:3]
+bc2.trainlabels <- bc_df.2[ind==1,1]
+bc2.trainlabels <- bc2.trainlabels$label
+bc2.testlabels <- bc_df.2[ind==2,1]
+bc2.testlabels <- bc2.testlabels$label
+```
+
+```{r knn, echo = TRUE}
+bc_pred <- knn(train = bc2.train, test = bc2.test, cl = bc2.trainlabels, k=3)
+bc_pred
+
+CrossTable(x = bc2.testlabels, y = bc_pred, prop.chisq=FALSE)
+
+sum(bc2.testlabels==bc_pred)/length(bc_pred)
+```
+
+The k-nearest neighbors algorithm yielded an accuracy of 96.1%, much better than the logistic regression.
+
+### c. Why is the accuracy of the logistic regression classifier different from that of the nearest neighbors?
+
+When the data is non-linear, as in this case where looking at the plot shows the data to be in small clusters, a logistic regression may not be the best approach. Since these data are clustered in groups, the nearest neighbors algorithm, which classifies points based on what other points are close to it, is a better option.

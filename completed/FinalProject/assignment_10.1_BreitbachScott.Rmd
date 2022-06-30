@@ -3,8 +3,9 @@ title: "Assignment 10.1"
 author: "Scott Breitbach"
 date: "8/3/2020"
 output:
-  word_document: default
+  pdf_document: default
   html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
